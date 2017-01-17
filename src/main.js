@@ -11,8 +11,8 @@ Vue.use(VueRouter);
 
 const router = new VueRouter({
     routes: [
-        {path: '/', component: require('./components/index.vue')},
-        {path: '/colorPicker', component: require('./components/colorPicker.vue')}
+        {path: '/', component: require('./pages/index.vue')},
+        {path: '/colorPicker', component: require('./pages/colorPicker.vue')}
     ]
 });
 

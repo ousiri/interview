@@ -1,5 +1,5 @@
 {
-  "name": "interview",
+  "name": "mint-ui-learn",
   "version": "1.0.0",
   "description": "A Vue.js project",
   "author": "ousiri <ousiri@qq.com>",
@@ -9,6 +9,7 @@
     "build": "node build/build.js"
   },
   "dependencies": {
+    "color": "^1.0.3",
     "mint-ui": "^2.1.0",
     "node-sass": "^4.1.1",
     "sass-loader": "^4.1.1",
