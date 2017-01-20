@@ -12,5 +12,6 @@
 
 
 <script lang="es6">
-    export default {};
+    export default {
+    };
 </script>

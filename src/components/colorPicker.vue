@@ -1,139 +1,265 @@
 <template>
-    <div class="color-picker">
-        <div class="content">
-            <canvas ref="canvas1" id="canvas1" :width="width1" :height="height1"></canvas>
-            <canvas ref="canvas2" id="canvas2" :width="width2" :height="height2"></canvas>
-            <canvas ref="canvas3" id="canvas3" :width="width3" :height="height3"></canvas>
+    <div class="color-picker" :style="colorPickerStyle">
+        <canvas ref="redGreenSidebar" id="red-green-sidebar" :width="width1" :height="height1"></canvas>
+        <canvas ref="redGreenSidebar2" id="red-green-sidebar2" :width="width1" :height="height1"
+                v-drag="redGreenDrag"></canvas>
+        <div class="red-green-picker" ref="redGreenPicker"></div>
+        <canvas ref="blueSidebar" id="blue-sidebar" :width="width2" :height="height2" v-drag="blueDrag"></canvas>
+        <div class="blue-picker" ref="bluePicker"></div>
+        <div class="alpha-wrapper" v-if="type!=1">
+            <div class="alpha-sidebar" ref="alphaSidebar" v-drag="alphaDrag"></div>
         </div>
-        <div class="display">
-            <p class="range-result">{{value}}</p>
-            <div v-if="value" class="range-color" :style="{backgroundColor:value}"></div>
-        </div>
+        <div class="alpha-picker" ref="alphaPicker" v-if="type!=1"></div>
     </div>
 </template>
 
 <style lang="scss" scoped>
     .color-picker{
         width: 286px;
-        //height: 286px;
+        height: 272px;
+        position: relative;
+        overflow: hidden;
     }
-    #canvas1{
+    #red-green-sidebar, #red-green-sidebar2{
         width: 256px;
         height: 256px;
-        float: left;
+        position: absolute;
+        top: 0;
+        left: 0;
+        user-select: none
     }
-    #canvas2{
+    .red-green-picker{
+        position: absolute;
+        width: 9px;
+        height: 9px;
+        border: 1px solid white;
+        border-radius: 50%;
+        margin-left: -5px;
+        margin-top: -5px;
+    }
+    #blue-sidebar{
         width: 30px;
         height: 256px;
-        float: left;
+        position: absolute;
+        top: 0;
+        left: 256px;
+        user-select: none
     }
-    #canvas3{
+    .blue-picker{
+        width: 30px;
+        height: 0;
+        position: absolute;
+        left: 256px;
+        top: 0;
+        &:before, &:after{
+            content: ' ';
+            position: absolute;
+            top: -3px;
+            left: 0;
+            border-left: 5px solid white;
+            border-top: 3px solid transparent;
+            border-bottom: 3px solid transparent;
+        }
+        &:after{
+            border-left: none;
+            border-right: 5px solid white;
+            left: auto;
+            right: 0;
+        }
+    }
+    .alpha-wrapper{
+        padding: 3px 0;
+        height: 10px;
+        background: #bbb;
+        position: absolute;
+        top: 256px;
+        left: 0;
+        user-select: none
+    }
+    .alpha-sidebar{
+        background: url(../assets/alpha-bg.png) repeat-y center center;
         width: 286px;
-        height: 30px;
-        clear: both;
+        height: 10px;
     }
-    .range-input{
-        display: block;
-        width: 300px;
-        margin: auto;
-    }
-    .range-result{
-        text-align: center;
-        margin: 10px auto;
-    }
-    .range-color{
-        width: 300px;
-        height: 20px;
-        margin: auto;
+    .alpha-picker{
+        height: 16px;
+        width: 0;
+        position: absolute;
+        top: 256px;
+        left: 0;
+        &:before, &:after{
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -3px;
+            border-top: 5px solid white;
+            border-left: 3px solid transparent;
+            border-right: 3px solid transparent;
+        }
+        &:after{
+            bottom: 0;
+            top: auto;
+            border-top: none;
+            border-bottom: 6px solid white;
+        }
     }
 </style>
 
 <script lang="es6">
 
+    import $ from 'jquery';
     import Color from 'color';
-
-    const ratio = window.devicePixelRatio || 1;
+    import _ from 'lodash';
 
     export default {
         props: {
-            value: { type: Color }
+            value: { type: Color },
+            type: {type: Number, default: 0}
         },
         data(){
             return {
                 color: null,
                 ratio: 1,
-                width1: 256 * ratio, height1: 256 * ratio,
-                width2: 30 * ratio, height2: 256 * ratio,
-                width3: 286 * ratio, height3: 30 * ratio,
-                ctx1: null, ctx2: null, ctx3: null
+                width1: 256, height1: 256,
+                width2: 30, height2: 256,
+                width3: 286, height3: 30,
+                redGreenCtx: null, redGreenCtx2: null, blueCtx: null,
+                isBlueTouching: false,
+                isAlphaTouching: false
             }
         },
         methods: {
-            readColor(pos){
-                const canvas1 = this.$refs.canvas1;
-                const ctx = canvas1.getContext('2d');
-                const pixel = ctx.getImageData(pos, 55, 1, 1);
-                return `rgb(${pixel.data[0]},${pixel.data[1]},${pixel.data[2]})`;
-            },
-            convertedColor(color){
-
-            },
-            paintRG(color){ // left-top canvas
-                const ctx = this.ctx1;
-                const c = Color(color);
-                ctx.fillStyle = "red";
-                ctx.fillRect(0, 0, 50, 50);
-                const imageData = ctx.getImageData(0, 0, 1, 1);
+            paintRedGreenBG(){
+                const ctx1 = this.redGreenCtx;
+                const ctx2 = this.redGreenCtx2;
+                const imageData = ctx1.getImageData(0, 0, 1, 1);
                 for(let i=0; i<256; i++){
                     for(let j=0; j<256; j++){
                         imageData.data[0] = i;
-                        imageData.data[1] = j;
-                        imageData.data[2] = c.blue();
+                        imageData.data[1] = 255-j;
+                        imageData.data[2] = 255;
                         imageData.data[3] = 255;
-                        for(let k=0; k<ratio; k++) {
-                            ctx.putImageData(imageData, i*ratio+k, j*ratio+k);
-                        }
+                        ctx1.putImageData(imageData, i, j);
+                        imageData.data[2] = 0;
+                        ctx2.putImageData(imageData, i, j);
                     }
                 }
             },
-            paintB(color){ // right-top canvas
-                const ctx = this.ctx2;
+            paintRedGreen(color){ // left-top canvas
+                this.$redGreenSidebar2.css('opacity', 1-color.blue()/255);
+                this.adjustBluePicker(color);
+                this.paintAlpha(color);
+            },
+            paintBlue(color){ // right-top canvas
+                const ctx = this.blueCtx;
                 const c = Color(color);
-                for(let i=0; i<256; i++){
-                    ctx.beginPath();
-                    for(let j=0; j<ratio; j++) {
-                        ctx.moveTo(0, i*ratio+j);
-                        ctx.lineTo(this.width2, i*ratio+j);
-                    }
-                    ctx.strokeStyle = c.blue(i).alpha(1).rgb().string();
-                    ctx.stroke();
-                    ctx.closePath();
+                const lineGrad = ctx.createLinearGradient(0, 0, 0, 256);
+                lineGrad.addColorStop(0, c.blue(255).alpha(1).rgb().string());
+                lineGrad.addColorStop(1, c.blue(0).alpha(1).rgb().string());
+                ctx.fillStyle = lineGrad;
+                ctx.fillRect(0, 0, 30, 256);
+                this.adjustRedGreenPicker(color);
+                this.paintAlpha(color);
+            },
+            paintAlpha(color){
+                this.$alphaSidebar.css('backgroundColor', Color(color).alpha(1).rgb().string());
+                this.adjustAlphaPicker(color);
+            },
+            adjustRedGreenPicker(color){
+                this.$redGreenPicker.css({
+                    left: color.red()+'px',
+                    top: 255-color.green()+'px'
+                })
+            },
+            adjustBluePicker(color){
+                this.$bluePicker.css('top', 255-color.blue());
+            },
+            adjustAlphaPicker(color){
+                this.$alphaPicker.css('left', color.alpha()*286);
+            },
+            redGreenDrag(event, touch){
+                this.red = Math.min(255, Math.max(0, (touch.clientX - this.$redGreenSidebar2.offset().left)));
+                this.green = 255-Math.min(255, Math.max(0, (touch.clientY - this.$redGreenSidebar2.offset().top)));
+                this.paintBlue(this.color);
+            },
+            blueDrag(event, touch){
+                this.blue = 255-(touch.clientY - this.$blueSidebar.offset().top);
+                this.paintRedGreen(this.color);
+            },
+            alphaDrag(event, touch){
+                this.alpha = (touch.clientX - this.$alphaSidebar.offset().left) / 286;
+                this.paintAlpha(this.color);
+            }
+        },
+        computed: {
+            red: {
+                set(v){
+                    this.color = this.color.red(v);
+                },
+                get(){
+                    return this.color.red();
                 }
             },
-            paintAlpha(color){ // bottom canvas, todo: could just use background
-                const lineGrad = this.ctx3.createLinearGradient(0, 0, this.width3, this.height3);
-                const start = Color(color).alpha(0);
-                const end = Color(color).alpha(1);
-                lineGrad.addColorStop(0, start.rgb().string());
-                lineGrad.addColorStop(1, end.rgb().string());
-                this.ctx3.fillStyle = lineGrad;
-                this.ctx3.fillRect(0, 0, this.width3, this.height3);
+            green: {
+                set(v){
+                    this.color = this.color.green(v);
+                },
+                get(){
+                    return this.color.green();
+                }
+            },
+            blue: {
+                set(v){
+                    this.color = this.color.blue(v);
+                },
+                get(){
+                    return this.color.blue();
+                }
+            },
+            alpha: {
+                set(v){
+                    v = parseFloat(v.toFixed(2));
+                    this.color = this.color.alpha(v);
+                },
+                get(){
+                    return this.color.alpha();
+                }
+            },
+            colorPickerStyle(){
+                console.log(123);
+                return {
+                    height: (this.type == 1 ? 256 : 272) + 'px'
+                }
             }
         },
         created(){
-            this.color = this.value || Color('#7743CE');
+
+            this.$watch('color', function(){
+                this.$emit('input', this.color);
+            }, {deep: true});
+
+            this.color = this.value ||
+                Color(`rgba(${parseInt(Math.random()*256)}, ${parseInt(Math.random()*256)}, ${parseInt(Math.random()*256)}, 1)`);
         },
         mounted(){
-            const $canvas1 = this.$refs.canvas1;
-            const $canvas2 = this.$refs.canvas2;
-            const $canvas3 = this.$refs.canvas3;
-            this.ctx1 = $canvas1.getContext('2d');
-            this.ctx2 = $canvas2.getContext('2d');
-            this.ctx3 = $canvas3.getContext('2d');
-            this.paintRG(this.color);
-            this.paintB(this.color);
-            this.paintAlpha(this.color);
+            this.$redGreenSidebar2 = $(this.$refs.redGreenSidebar2);
+            this.$redGreenPicker = $(this.$refs.redGreenPicker);
+            this.$blueSidebar = $(this.$refs.blueSidebar);
+            this.$bluePicker = $(this.$refs.bluePicker);
+            this.$alphaSidebar = $(this.$refs.alphaSidebar);
+            this.$alphaPicker = $(this.$refs.alphaPicker);
+            const $redGreenSidebar = this.$refs.redGreenSidebar;
+            const $redGreenSidebar2 = this.$refs.redGreenSidebar2;
+            const $blueSidebar = this.$refs.blueSidebar;
 
+            this.redGreenCtx = $redGreenSidebar.getContext('2d');
+            this.redGreenCtx2 = $redGreenSidebar2.getContext('2d');
+            this.blueCtx = $blueSidebar.getContext('2d');
+
+            this.paintRedGreenBG();
+            this.paintRedGreen(this.color);
+            this.paintBlue(this.color);
+            this.paintAlpha(this.color);
         }
     }
 </script>
