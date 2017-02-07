@@ -6,14 +6,14 @@
         <div class="red-green-picker" ref="redGreenPicker"></div>
         <canvas ref="blueSidebar" id="blue-sidebar" :width="width2" :height="height2" v-drag="blueDrag"></canvas>
         <div class="blue-picker" ref="bluePicker"></div>
-        <div class="alpha-wrapper" v-if="type!=1">
+        <div class="alpha-wrapper" v-if="withOpacity">
             <div class="alpha-sidebar" ref="alphaSidebar" v-drag="alphaDrag"></div>
         </div>
-        <div class="alpha-picker" ref="alphaPicker" v-if="type!=1"></div>
+        <div class="alpha-picker" ref="alphaPicker" v-if="withOpacity"></div>
     </div>
 </template>
 
-<style lang="scss" scoped>
+<style lang="scss" scoped rel="stylesheet/scss">
     .color-picker{
         width: 286px;
         height: 272px;
@@ -105,8 +105,7 @@
     }
 </style>
 
-<script lang="es6">
-
+<script>
     import $ from 'jquery';
     import Color from 'color';
     import _ from 'lodash';
@@ -114,7 +113,7 @@
     export default {
         props: {
             value: { type: Color },
-            type: {type: Number, default: 0}
+            withOpacity: {type: Boolean, default: true}
         },
         data(){
             return {
@@ -226,9 +225,8 @@
                 }
             },
             colorPickerStyle(){
-                console.log(123);
                 return {
-                    height: (this.type == 1 ? 256 : 272) + 'px'
+                    height: (!this.withOpacity ? 256 : 272) + 'px'
                 }
             }
         },
