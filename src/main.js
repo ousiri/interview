@@ -57,7 +57,8 @@ const router = new VueRouter({
   routes: [
     {path: '/', component: require('./pages/index')},
     {path: '/colorPicker', component: require('./pages/colorPicker')},
-    {path: '/gesture', component: require('./pages/gesture')}
+    {path: '/gesture', component: require('./pages/gesture')},
+    {path: '/music', component: require('./pages/music')}
   ]
 });
 
